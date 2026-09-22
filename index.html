@@ -1,0 +1,699 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="color-scheme" content="dark" />
+  <meta name="theme-color" content="#0b0d10" />
+  <meta name="description" content="A plain-English visual guide to Bitcoin Knots 29.4.2 coinbase maturity, consensus, and policy on the BLAKE2b chain." />
+  <title>Bitcoin Knots 29.4.2: Coinbase Maturity Explained</title>
+  <style>
+    :root {
+      --bg: #0b0d10;
+      --panel: #11151a;
+      --panel-2: #151b22;
+      --text: #f4f7fb;
+      --muted: #aeb7c2;
+      --line: #26303a;
+      --orange: #f7931a;
+      --green: #55d98d;
+      --red: #ff6b6b;
+      --blue: #6fb7ff;
+      --yellow: #ffd166;
+      --shadow: 0 24px 80px rgba(0,0,0,.35);
+      --radius: 24px;
+      --max: 1040px;
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      background:
+        radial-gradient(900px 500px at 20% -10%, rgba(247,147,26,.11), transparent 62%),
+        radial-gradient(800px 500px at 90% 10%, rgba(111,183,255,.08), transparent 60%),
+        var(--bg);
+      color: var(--text);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.55;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    a { color: inherit; }
+    .progress {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 3px;
+      z-index: 20;
+      background: rgba(255,255,255,.05);
+    }
+    .progress > span {
+      display: block;
+      width: 0;
+      height: 100%;
+      background: linear-gradient(90deg, var(--orange), var(--yellow));
+    }
+
+    main { overflow: hidden; }
+    .wrap {
+      width: min(calc(100% - 36px), var(--max));
+      margin: 0 auto;
+    }
+
+    .hero {
+      min-height: 94vh;
+      display: grid;
+      place-items: center;
+      padding: 88px 0 64px;
+    }
+    .hero-inner {
+      display: grid;
+      grid-template-columns: 1.08fr .92fr;
+      gap: 46px;
+      align-items: center;
+    }
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 9px;
+      padding: 7px 11px;
+      border: 1px solid rgba(247,147,26,.28);
+      background: rgba(247,147,26,.07);
+      color: #ffc078;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 750;
+      letter-spacing: .02em;
+    }
+    .dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 999px;
+      background: var(--orange);
+      box-shadow: 0 0 16px rgba(247,147,26,.8);
+    }
+    h1 {
+      margin: 18px 0 20px;
+      font-size: clamp(44px, 7.2vw, 82px);
+      line-height: .98;
+      letter-spacing: -.055em;
+      max-width: 790px;
+    }
+    .hero p {
+      max-width: 680px;
+      margin: 0;
+      color: var(--muted);
+      font-size: clamp(18px, 2.2vw, 23px);
+    }
+    .hero p strong { color: var(--text); }
+
+    .hero-card {
+      position: relative;
+      background: linear-gradient(180deg, rgba(255,255,255,.045), rgba(255,255,255,.015));
+      border: 1px solid var(--line);
+      border-radius: 30px;
+      padding: 26px;
+      box-shadow: var(--shadow);
+    }
+    .hero-card svg { width: 100%; height: auto; display: block; }
+
+    section {
+      padding: 96px 0;
+      border-top: 1px solid rgba(255,255,255,.055);
+    }
+    .section-head {
+      display: grid;
+      grid-template-columns: 190px 1fr;
+      gap: 26px;
+      margin-bottom: 40px;
+      align-items: start;
+    }
+    .step {
+      color: var(--orange);
+      font-weight: 800;
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: .12em;
+      padding-top: 10px;
+    }
+    h2 {
+      margin: 0;
+      font-size: clamp(34px, 5vw, 58px);
+      line-height: 1.04;
+      letter-spacing: -.045em;
+      max-width: 820px;
+    }
+    .lead {
+      margin: 16px 0 0;
+      color: var(--muted);
+      font-size: 19px;
+      max-width: 760px;
+    }
+
+    .card {
+      background: linear-gradient(180deg, rgba(255,255,255,.035), rgba(255,255,255,.018));
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 28px;
+      box-shadow: 0 18px 60px rgba(0,0,0,.18);
+    }
+
+    .old-rule {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      align-items: center;
+      gap: 22px;
+    }
+    .coin {
+      min-height: 170px;
+      display: grid;
+      place-items: center;
+      text-align: center;
+      border-radius: 22px;
+      background: var(--panel-2);
+      border: 1px solid var(--line);
+      padding: 24px;
+    }
+    .coin .big { font-size: 40px; font-weight: 850; letter-spacing: -.04em; }
+    .coin .small { color: var(--muted); font-size: 14px; margin-top: 4px; }
+    .arrow { color: var(--muted); font-size: 34px; }
+
+    .two-rules {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+    .rule-card { min-height: 310px; }
+    .rule-card h3 { margin: 14px 0 10px; font-size: 29px; letter-spacing: -.03em; }
+    .rule-card p { color: var(--muted); margin: 0; font-size: 17px; }
+    .rule-icon {
+      width: 54px;
+      height: 54px;
+      border-radius: 17px;
+      display: grid;
+      place-items: center;
+      font-size: 26px;
+      font-weight: 900;
+    }
+    .consensus .rule-icon { background: rgba(85,217,141,.1); color: var(--green); border: 1px solid rgba(85,217,141,.22); }
+    .policy .rule-icon { background: rgba(111,183,255,.1); color: var(--blue); border: 1px solid rgba(111,183,255,.22); }
+    .mini-list { margin-top: 22px; display: grid; gap: 10px; }
+    .mini-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: #dce3ea;
+      font-size: 15px;
+    }
+    .mini-row span:first-child { width: 22px; text-align: center; color: var(--muted); }
+
+    .timeline {
+      position: relative;
+      margin-top: 16px;
+      padding-top: 34px;
+    }
+    .track {
+      height: 16px;
+      border-radius: 999px;
+      background: linear-gradient(90deg, #202831 0 17%, rgba(247,147,26,.7) 17% 79%, #202831 79% 100%);
+      border: 1px solid #2b3540;
+      overflow: hidden;
+    }
+    .ticks {
+      display: grid;
+      grid-template-columns: 17% 62% 21%;
+      margin-top: 16px;
+      gap: 0;
+    }
+    .tick { font-size: 14px; color: var(--muted); }
+    .tick strong { display: block; color: var(--text); font-size: 17px; margin-bottom: 4px; }
+    .tick:nth-child(2) { text-align: center; }
+    .tick:nth-child(3) { text-align: right; }
+    .window-note {
+      margin-top: 22px;
+      padding: 15px 18px;
+      border-radius: 15px;
+      background: rgba(247,147,26,.075);
+      border: 1px solid rgba(247,147,26,.2);
+      color: #f4d2a8;
+      font-size: 15px;
+    }
+
+    .compare {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+    .scenario { position: relative; overflow: hidden; }
+    .scenario .label {
+      font-size: 13px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: .09em;
+      color: var(--muted);
+    }
+    .scenario h3 { font-size: 27px; margin: 10px 0 16px; letter-spacing: -.03em; }
+    .status {
+      display: grid;
+      grid-template-columns: 112px 1fr;
+      gap: 12px;
+      align-items: center;
+      padding: 15px 0;
+      border-top: 1px solid var(--line);
+    }
+    .status-name { color: var(--muted); font-size: 14px; }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      width: fit-content;
+      padding: 7px 10px;
+      border-radius: 999px;
+      font-size: 14px;
+      font-weight: 800;
+    }
+    .ok { background: rgba(85,217,141,.1); color: #8ee7b2; border: 1px solid rgba(85,217,141,.22); }
+    .no { background: rgba(255,107,107,.1); color: #ff9b9b; border: 1px solid rgba(255,107,107,.22); }
+    .warn { background: rgba(255,209,102,.1); color: #ffe29a; border: 1px solid rgba(255,209,102,.22); }
+
+    .flow {
+      display: grid;
+      grid-template-columns: 1fr 60px 1fr 60px 1fr;
+      align-items: stretch;
+      gap: 10px;
+    }
+    .flow-box {
+      padding: 22px;
+      min-height: 180px;
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      background: var(--panel);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    .flow-box strong { font-size: 20px; }
+    .flow-box small { color: var(--muted); font-size: 14px; }
+    .flow-arrow { display: grid; place-items: center; color: #627080; font-size: 30px; }
+
+    .key {
+      margin-top: 28px;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+    }
+    .key .card { padding: 22px; }
+    .key strong { display: block; font-size: 28px; letter-spacing: -.035em; margin-bottom: 5px; }
+    .key span { color: var(--muted); font-size: 14px; }
+
+    .bottom-line {
+      background:
+        radial-gradient(500px 250px at 80% 0%, rgba(247,147,26,.14), transparent 70%),
+        linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.018));
+      border: 1px solid rgba(247,147,26,.28);
+      border-radius: 28px;
+      padding: 34px;
+    }
+    .bottom-line h3 {
+      margin: 0 0 16px;
+      font-size: clamp(30px, 4vw, 46px);
+      letter-spacing: -.04em;
+      line-height: 1.04;
+    }
+    .bottom-line p { margin: 0; color: #d8dfe7; font-size: 18px; max-width: 820px; }
+    .bottom-line strong { color: white; }
+
+    .sources {
+      margin-top: 38px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .source-link {
+      text-decoration: none;
+      color: #c8d0d8;
+      padding: 9px 12px;
+      border-radius: 12px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,.025);
+      font-size: 13px;
+    }
+    .source-link:hover { border-color: #43505e; color: white; }
+
+    footer {
+      padding: 28px 0 58px;
+      color: #7f8b97;
+      font-size: 13px;
+      text-align: center;
+    }
+
+    @media (max-width: 820px) {
+      .hero { min-height: auto; padding-top: 84px; }
+      .hero-inner, .two-rules, .compare { grid-template-columns: 1fr; }
+      .hero-card { max-width: 560px; }
+      .section-head { grid-template-columns: 1fr; gap: 8px; }
+      .step { padding-top: 0; }
+      .flow { grid-template-columns: 1fr; }
+      .flow-arrow { transform: rotate(90deg); min-height: 34px; }
+      .key { grid-template-columns: 1fr; }
+      .old-rule { grid-template-columns: 1fr; }
+      .arrow { transform: rotate(90deg); text-align: center; }
+      .ticks { grid-template-columns: 1fr; gap: 18px; }
+      .tick:nth-child(2), .tick:nth-child(3) { text-align: left; }
+      section { padding: 74px 0; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+    }
+  </style>
+</head>
+<body>
+  <div class="progress" aria-hidden="true"><span id="progressBar"></span></div>
+
+  <main>
+    <header class="hero">
+      <div class="wrap hero-inner">
+        <div>
+          <div class="eyebrow"><span class="dot"></span> Bitcoin Knots 29.4.2 · BLAKE2b</div>
+          <h1>Coinbase maturity changed. But not in one single way.</h1>
+          <p>The release has a <strong>consensus rule</strong> and a stricter <strong>policy rule</strong>. That difference is why older mining rewards can look locked even when they are still valid to spend in a block.</p>
+        </div>
+
+        <div class="hero-card" aria-label="Visual showing consensus and policy as two separate gates">
+          <svg viewBox="0 0 560 440" role="img" aria-labelledby="heroTitle heroDesc">
+            <title id="heroTitle">Two gates: policy and consensus</title>
+            <desc id="heroDesc">A coinbase spend faces two separate checks. Policy decides whether Knots will accept and relay it. Consensus decides whether a block containing it is valid.</desc>
+            <defs>
+              <linearGradient id="g1" x1="0" x2="1">
+                <stop offset="0" stop-color="#f7931a"/>
+                <stop offset="1" stop-color="#ffd166"/>
+              </linearGradient>
+            </defs>
+            <rect x="26" y="34" width="508" height="372" rx="28" fill="#0d1116" stroke="#2a333d"/>
+            <circle cx="108" cy="220" r="48" fill="url(#g1)" opacity=".95"/>
+            <text x="108" y="231" text-anchor="middle" fill="#0b0d10" font-size="36" font-weight="900">₿</text>
+            <text x="108" y="288" text-anchor="middle" fill="#aeb7c2" font-size="15">coinbase spend</text>
+
+            <path d="M156 220 H206" stroke="#617081" stroke-width="4" stroke-linecap="round"/>
+            <path d="M196 210 L208 220 L196 230" fill="none" stroke="#617081" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M208 220 C225 220 214 142 226 142" stroke="#617081" stroke-width="3" fill="none"/>
+            <path d="M208 220 C225 220 214 298 226 298" stroke="#617081" stroke-width="3" fill="none"/>
+
+            <rect x="232" y="100" width="220" height="84" rx="20" fill="#121922" stroke="#32506c"/>
+            <text x="256" y="132" fill="#6fb7ff" font-size="14" font-weight="800" letter-spacing=".5">POLICY</text>
+            <text x="256" y="163" fill="#f4f7fb" font-size="20" font-weight="800">Mempool + relay</text>
+
+            <rect x="232" y="256" width="220" height="84" rx="20" fill="#121a16" stroke="#326b4a"/>
+            <text x="256" y="288" fill="#55d98d" font-size="14" font-weight="800" letter-spacing=".5">CONSENSUS</text>
+            <text x="256" y="319" fill="#f4f7fb" font-size="20" font-weight="800">Block validity</text>
+
+            <circle cx="495" cy="142" r="26" fill="rgba(255,107,107,.14)" stroke="#ff6b6b"/>
+            <path d="M485 132 L505 152 M505 132 L485 152" stroke="#ff8f8f" stroke-width="4" stroke-linecap="round"/>
+            <circle cx="495" cy="298" r="26" fill="rgba(85,217,141,.14)" stroke="#55d98d"/>
+            <path d="M483 299 L492 308 L508 287" fill="none" stroke="#7de5aa" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+      </div>
+    </header>
+
+    <section>
+      <div class="wrap">
+        <div class="section-head">
+          <div class="step">1 · Start simple</div>
+          <div>
+            <h2>Bitcoin already had a coinbase maturity rule.</h2>
+            <p class="lead">A newly mined reward normally cannot be spent until it has 100 blocks of confirmation.</p>
+          </div>
+        </div>
+
+        <div class="card old-rule">
+          <div class="coin">
+            <div>
+              <div class="big">Block mined</div>
+              <div class="small">Coinbase reward is created</div>
+            </div>
+          </div>
+          <div class="arrow">→</div>
+          <div class="coin">
+            <div>
+              <div class="big">100 blocks</div>
+              <div class="small">Then it is normally spendable</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <div class="wrap">
+        <div class="section-head">
+          <div class="step">2 · The new release</div>
+          <div>
+            <h2>Knots 29.4.2 adds a temporary 6480-block rule.</h2>
+            <p class="lead">On mainnet, the release defines a long-maturity window beginning at block <strong>973440</strong> and ending before block <strong>979920</strong>.</p>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="timeline">
+            <div class="track" aria-hidden="true"></div>
+            <div class="ticks">
+              <div class="tick"><strong>Before 973440</strong>Old rewards already exist</div>
+              <div class="tick"><strong>973440 → 979919</strong>Long-maturity consensus window</div>
+              <div class="tick"><strong>979920+</strong>Consensus window ends</div>
+            </div>
+            <div class="window-note">6480 blocks is the configured long maturity. The important part is that consensus and policy apply it differently.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <div class="wrap">
+        <div class="section-head">
+          <div class="step">3 · Two rulebooks</div>
+          <div>
+            <h2>Consensus and policy are not the same thing.</h2>
+            <p class="lead">Both matter, but they answer different questions.</p>
+          </div>
+        </div>
+
+        <div class="two-rules">
+          <article class="card rule-card consensus">
+            <div class="rule-icon">✓</div>
+            <h3>Consensus</h3>
+            <p>Consensus decides whether a block is valid. If a transaction breaks consensus, nodes reject the block that contains it.</p>
+            <div class="mini-list">
+              <div class="mini-row"><span>→</span><span>Defines the actual chain rules</span></div>
+              <div class="mini-row"><span>→</span><span>Miners cannot ignore it without forking</span></div>
+              <div class="mini-row"><span>→</span><span>Old coinbases are not retroactively covered</span></div>
+            </div>
+          </article>
+
+          <article class="card rule-card policy">
+            <div class="rule-icon">⇄</div>
+            <h3>Policy</h3>
+            <p>Policy decides what a node will accept into its mempool, relay to peers, and usually offer to miners.</p>
+            <div class="mini-list">
+              <div class="mini-row"><span>→</span><span>Policy can be stricter than consensus</span></div>
+              <div class="mini-row"><span>→</span><span>A policy-rejected transaction can still be consensus-valid</span></div>
+              <div class="mini-row"><span>→</span><span>29.4.2 applies 6480 blocks to all coinbases in policy</span></div>
+            </div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <div class="wrap">
+        <div class="section-head">
+          <div class="step">4 · What consensus does</div>
+          <div>
+            <h2>Consensus is not retroactive.</h2>
+            <p class="lead">For block validation, the code checks the height where the coinbase was created.</p>
+          </div>
+        </div>
+
+        <div class="compare">
+          <article class="card scenario">
+            <div class="label">Example A</div>
+            <h3>Coinbase mined at 972000</h3>
+            <div class="status">
+              <div class="status-name">Created</div>
+              <div>Before block 973440</div>
+            </div>
+            <div class="status">
+              <div class="status-name">Consensus</div>
+              <div class="badge ok">✓ Normal 100-block rule</div>
+            </div>
+            <div class="status">
+              <div class="status-name">Retroactive?</div>
+              <div class="badge ok">No</div>
+            </div>
+          </article>
+
+          <article class="card scenario">
+            <div class="label">Example B</div>
+            <h3>Coinbase mined at 973500</h3>
+            <div class="status">
+              <div class="status-name">Created</div>
+              <div>Inside the new window</div>
+            </div>
+            <div class="status">
+              <div class="status-name">Consensus</div>
+              <div class="badge warn">Long-maturity rule applies</div>
+            </div>
+            <div class="status">
+              <div class="status-name">Until</div>
+              <div>Consensus release height 979920</div>
+            </div>
+          </article>
+        </div>
+        <div class="window-note" style="margin-top:20px">This is a temporary consensus window, not a permanent 6480-block tag attached to each reward. At block 979920 the long consensus rule turns off and the normal 100-block rule applies again.</div>
+      </div>
+    </section>
+
+    <section>
+      <div class="wrap">
+        <div class="section-head">
+          <div class="step">5 · What policy does</div>
+          <div>
+            <h2>Policy is retroactive in 29.4.2.</h2>
+            <p class="lead">The mempool path uses a start height of <strong>0</strong>. That makes every coinbase look subject to the 6480-block policy rule, even if it was mined long before 973440. In this release, that policy is not limited to the consensus window.</p>
+          </div>
+        </div>
+
+        <div class="flow">
+          <div class="flow-box">
+            <strong>Old coinbase</strong>
+            <small>Mined before 973440 and already more than 100 blocks old</small>
+          </div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-box">
+            <strong>Knots mempool</strong>
+            <small>Checks against 6480 blocks because policy uses start height 0</small>
+          </div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-box">
+            <strong style="color:#ff9b9b">Rejected by policy</strong>
+            <small>Not normally accepted, relayed, or mined from the mempool</small>
+          </div>
+        </div>
+
+        <div class="key">
+          <div class="card"><strong>Before 973440</strong><span>Policy still asks for 6480 confirmations</span></div>
+          <div class="card"><strong>During window</strong><span>Policy still asks for 6480 confirmations</span></div>
+          <div class="card"><strong>After 979920</strong><span>Policy still asks for 6480 confirmations</span></div>
+        </div>
+        <div class="window-note">Why? The mempool call passes <strong>0</strong> as the long-maturity start height, so every real coinbase height qualifies for the 6480-block policy check.</div>
+      </div>
+    </section>
+
+    <section>
+      <div class="wrap">
+        <div class="section-head">
+          <div class="step">6 · The confusing case</div>
+          <div>
+            <h2>A transaction can be rejected by Knots policy and still be valid Bitcoin consensus.</h2>
+            <p class="lead">This is the part that sounds contradictory until the two rulebooks are separated.</p>
+          </div>
+        </div>
+
+        <div class="card compare">
+          <div class="scenario">
+            <div class="label">Old coinbase · 2045 confirmations</div>
+            <h3>Send it normally</h3>
+            <div class="status">
+              <div class="status-name">Mempool</div>
+              <div class="badge no">✕ Rejected</div>
+            </div>
+            <div class="status">
+              <div class="status-name">Reason</div>
+              <div>Policy still wants 6480 confirmations</div>
+            </div>
+          </div>
+
+          <div class="scenario">
+            <div class="label">Same exact spend</div>
+            <h3>Put it directly in a valid block</h3>
+            <div class="status">
+              <div class="status-name">Consensus</div>
+              <div class="badge ok">✓ Accepted</div>
+            </div>
+            <div class="status">
+              <div class="status-name">Reason</div>
+              <div>The coinbase was mined before 973440 and already passed 100 blocks</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <div class="wrap">
+        <div class="section-head">
+          <div class="step">7 · Wallet effect</div>
+          <div>
+            <h2>The built-in Knots wallet also uses the 6480-block value.</h2>
+            <p class="lead">So an older reward can appear “immature” in the wallet even though consensus would allow it in a block.</p>
+          </div>
+        </div>
+
+        <div class="card old-rule">
+          <div class="coin">
+            <div>
+              <div class="big">Consensus</div>
+              <div class="small">“This old reward is spendable.”</div>
+            </div>
+          </div>
+          <div class="arrow">≠</div>
+          <div class="coin">
+            <div>
+              <div class="big">Wallet / policy</div>
+              <div class="small">“Wait until 6480 confirmations.”</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <div class="wrap">
+        <div class="bottom-line">
+          <h3>The bottom line</h3>
+          <p><strong>Bitcoin Knots 29.4.2 does not retroactively change consensus for coinbases mined before block 973440.</strong> Those old rewards still only need the normal 100-block maturity to be valid in a block. But <strong>29.4.2 policy is stricter and retroactive:</strong> its mempool and wallet treat every coinbase as needing 6480 confirmations. That is why an old reward can be consensus-valid yet still be rejected by a normal Knots transaction broadcast.</p>
+        </div>
+
+        <div class="sources" aria-label="Source code links">
+          <a class="source-link" href="https://github.com/bitcoinknots/bitcoin/blob/v29.4.2.knots20260508/src/kernel/chainparams.cpp#L143-L147" target="_blank" rel="noreferrer">Mainnet parameters</a>
+          <a class="source-link" href="https://github.com/bitcoinknots/bitcoin/blob/v29.4.2.knots20260508/src/consensus/tx_verify.cpp#L196-L203" target="_blank" rel="noreferrer">Consensus maturity check</a>
+          <a class="source-link" href="https://github.com/bitcoinknots/bitcoin/blob/v29.4.2.knots20260508/src/validation.cpp#L1017-L1024" target="_blank" rel="noreferrer">Mempool policy check</a>
+          <a class="source-link" href="https://github.com/bitcoinknots/bitcoin/blob/v29.4.2.knots20260508/src/validation.cpp#L3012-L3034" target="_blank" rel="noreferrer">Block consensus path</a>
+          <a class="source-link" href="https://github.com/bitcoinknots/bitcoin/blob/v29.4.2.knots20260508/src/wallet/wallet.cpp#L3640-L3650" target="_blank" rel="noreferrer">Wallet maturity display</a>
+          <a class="source-link" href="https://github.com/bitcoinknots/bitcoin/blob/v29.4.2.knots20260508/test/functional/mempool_long_coinbase_maturity.py" target="_blank" rel="noreferrer">Functional test</a>
+          <a class="source-link" href="https://github.com/bitcoinknots/bitcoin/pull/419" target="_blank" rel="noreferrer">PR #419 discussion</a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="wrap">Explains Bitcoin Knots v29.4.2.knots20260508 behavior from the tagged source code.</div>
+  </footer>
+
+  <script>
+    const bar = document.getElementById('progressBar');
+    const update = () => {
+      const max = document.documentElement.scrollHeight - window.innerHeight;
+      const pct = max > 0 ? (window.scrollY / max) * 100 : 0;
+      bar.style.width = pct + '%';
+    };
+    update();
+    addEventListener('scroll', update, { passive: true });
+    addEventListener('resize', update);
+  </script>
+</body>
+</html>
